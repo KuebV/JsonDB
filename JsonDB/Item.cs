@@ -1,8 +1,5 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.IO;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -14,10 +11,16 @@ namespace JsonDB
         private Database Database;
         private Collection Collection;
 
+        private string ItemHomeFolder => Path.Combine(Database.DBLocation, Collection.DBCollectionName);
+
+        private Log Log;
+
         public Item(Database DB, Collection Collect)
         {
             Database = DB;
             Collection = Collect;
+
+            Log = new Log(DB.Name, Collect.DBCollectionName);
         }
 
         /// <summary>
@@ -29,7 +32,10 @@ namespace JsonDB
         {
             string IDFile = Path.Combine(Path.Combine(Database.DBLocation, Collection.DBCollectionName), string.Format("{0}.json", ID));
             if (!File.Exists(IDFile))
+            {
+                Log.Error($"[Item : {ID}] does not exist in Collection!");
                 return null;
+            }
 
             string textFile = File.ReadAllText(IDFile);
             JObject rss = JObject.Parse(textFile);
@@ -42,7 +48,6 @@ namespace JsonDB
             List<string> list = new List<string>();
             foreach (var file in Directory.EnumerateFiles(collectionFile))
             {
-
                 // Look through each file to find the document that contains the specified filter
                 if (filter.Field == null)
                 {
@@ -52,10 +57,72 @@ namespace JsonDB
                         list.Add(fileinfo);
                     }
                 }
-
+                else
+                {
+                    string text = File.ReadAllText(file);
+                    JObject obj = JObject.Parse(text);
+                    if (obj[filter.Field].Equals(filter.FieldValue))
+                        list.Add(text);
+                }
             }
             return list;
 
+        }
+
+
+        /// <summary>
+        /// Update a Item when given an ID
+        /// Example : item.UpdateItem("439742", UpdateOptions.Set, "Age", 23)
+        /// </summary>
+        /// <param name="ID"></param>
+        /// <param name="Options"></param>
+        /// <param name="FieldName"></param>
+        /// <param name="FieldValue"></param>
+        public void UpdateItem(string ID, UpdateOptions Options, string FieldName, object FieldValue)
+        {
+            if (!File.Exists(Path.Combine(ItemHomeFolder, string.Format("{0}.json", ID))))
+                return;
+
+            JObject jobj = JObject.Parse(Path.Combine(ItemHomeFolder, string.Format("{0}.json", ID)));
+
+            // We know that the Item exists in the Collection
+            switch (Options)
+            {
+                case UpdateOptions.Set:
+                    jobj[FieldName] = (JToken)FieldValue;
+                    string serializeFile = JsonConvert.SerializeObject(jobj, Formatting.Indented);
+                    File.WriteAllText(Path.Combine(ItemHomeFolder, string.Format("{0}.json", ID)), serializeFile);
+                    break;
+                case UpdateOptions.Append:
+                    JArray ja = (JArray)jobj[FieldName];
+                    ja.Add(FieldValue);
+
+                    string file = JsonConvert.SerializeObject(jobj, Formatting.Indented);
+                    File.WriteAllText(Path.Combine(ItemHomeFolder, string.Format("{0}.json", ID)), file);
+                    break;
+
+            }
+
+        }
+
+
+        /// <summary>
+        /// Add Multiple Items into a Collection
+        /// </summary>
+        /// <param name=""></param>
+        public void MassAddItem(Dictionary<string, object> Items)
+        {
+            foreach (var item in Items)
+            {
+                if (!File.Exists(Path.Combine(ItemHomeFolder, string.Format("{0}.json", item.Key))))
+                {
+                    string jsonData = JsonConvert.SerializeObject(item.Value);
+                    File.WriteAllText(Path.Combine(ItemHomeFolder, string.Format("{0}.json", item.Key)), jsonData);
+                }
+
+                Log.Error($"Item with ID: {item.Key} already exists in collection!");
+                    
+            }
         }
 
         /// <summary>
@@ -70,5 +137,11 @@ namespace JsonDB
                 File.WriteAllText(Path.Combine(Path.Combine(Database.DBLocation, Collection.DBCollectionName), string.Format("{0}.json", ID)), jsonSeralizer);
                 
         }
+    }
+
+    public enum UpdateOptions
+    {
+        Set = 1,
+        Append = 2
     }
 }
