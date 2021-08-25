@@ -1,9 +1,6 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace JsonDB
 {
@@ -11,19 +8,21 @@ namespace JsonDB
     {
         public string DBLocation;
         public string Name;
+        public bool DatabaseOutput;
 
         /// <summary>
         /// Location of where the Database is in the files
         /// Defaults to the location of the current directory
         /// </summary>
         /// <param name="DatabaseLocation"></param>
-        public Database(string DatabaseName, string DatabaseLocation = null)
+        public Database(string DatabaseName, string DatabaseLocation = null, bool DatabaseConsoleOutput = true)
         {
             if (DatabaseLocation != null)
                 DBLocation = DatabaseLocation;
             else
                 DBLocation = Path.Combine(Directory.GetCurrentDirectory(), DatabaseName);
 
+            DatabaseOutput = DatabaseConsoleOutput;
             Name = DatabaseName;
         }
 
