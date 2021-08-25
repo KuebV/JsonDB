@@ -1,9 +1,7 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace JsonDB
 {
@@ -37,17 +35,22 @@ namespace JsonDB
             string CollectionLocation = Path.Combine(DB.DBLocation, DBCollectionName);
 
             if (!Directory.Exists(CollectionLocation)){
-                Log.Information("Creating Collection : " + DBCollectionName);
+                if (DB.DatabaseOutput.Equals(true) || DB.DatabaseOutput.Equals(null))
+                    Log.Information("Creating Collection : " + DBCollectionName);
+
                 Directory.CreateDirectory(CollectionLocation);
             }
 
             if (StartupDictionaryEnabled)
             {
-                Log.Information("Adding Data to Dictionary, this may take a while...");
+                if (DB.DatabaseOutput.Equals(true) || DB.DatabaseOutput.Equals(null))
+                    Log.Information("Adding Data to Dictionary, this may take a while...");
+
                 foreach (var file in Directory.EnumerateFiles(CollectionLocation))
                 {
                     string fileText = File.ReadAllText(file);
-                    DBDictionary.Add(file.ToString(), fileText);
+                    string charToSplit = @"\";
+                    DBDictionary.Add(file.Split(char.Parse(charToSplit)).Last(), fileText);
                 }
             }
         }
